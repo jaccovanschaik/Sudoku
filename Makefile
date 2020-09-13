@@ -7,7 +7,9 @@
 
 SUDOKU = sudoku.o
 
-CFLAGS = -g -O0 -Wall
+# Set to 1 to see progress.
+DEBUG  = 0
+CFLAGS = -g -Og -Wall -DDEBUG=$(DEBUG)
 
 sudoku: $(SUDOKU)
 	$(CC) $(CFLAGS) -o sudoku $(SUDOKU)
