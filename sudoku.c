@@ -249,16 +249,6 @@ static int step2(const Sudoku *sudoku)
 }
 
 /*
- * Give some usage info for <argv0> and exit with exit code <exitcode>.
- */
-static void usage(const char *argv0, int exitcode)
-{
-    fprintf(stderr, "Usage: %s <sudoku_input_file>\n", basename(argv0));
-
-    exit(exitcode);
-}
-
-/*
  * <sudoku> has just been read from disk. Initialize the bitmasks for the rows,
  * columns and 3x3 squares.
  */
@@ -301,12 +291,14 @@ static void init_sudoku(Sudoku *sudoku)
 /*
  * Check character <c> in <text>, We expect it to be <exp>, if it isn't complain
  * on <fp> (indicating the error is in file <file> on line <line>) and exit with
- * an error code.
+ * an error code. If <exp> is '0' we'll accept anything as a placeholder for a
+ * digit, otherwise we expect the literal character <exp>.
  */
 static void expect(const char *text, int c, char exp,
         FILE *fp, const char *file, int line)
 {
     if (exp == ' ') {
+        // Treat spaces specially so we can say "a space" instead of "' '"
         if (text[c] != ' ') {
             fprintf(fp, "%s:%d: expected a space in column %d.\n",
                     file, line + 1, c + 1);
@@ -314,14 +306,20 @@ static void expect(const char *text, int c, char exp,
         }
     }
     else if (exp != '0') {
+        // Not a zero: expect the literal character <exp>
         if (text[c] != exp) {
             fprintf(fp, "%s:%d: expected '%c' in column %d.\n",
                     file, line + 1, exp, c + 1);
             exit(EXIT_FAILURE);
         }
     }
+    // When it *is* a zero anything goes, really.
 }
 
+/*
+ * Load a sudoku from <file> and put it in <sudoku>. Returns 1 if an error
+ * occurred, otherwise 0.
+ */
 static int load_sudoku(const char *file, Sudoku *sudoku)
 {
     FILE *fp;
@@ -351,17 +349,23 @@ static int load_sudoku(const char *file, Sudoku *sudoku)
             }
         }
         else {
-            int c = 0;
-            int row_num = line * 3 / 4;
+            int c = 0;                      // Character index
+            int row_num = line * 3 / 4;     // Current row number.
 
+            // <sqr_num> indexes the 3 side-by-side 3x3 squares.
             for (int sqr_num = 0; sqr_num < 3; sqr_num++) {
                 expect(text, c++, '|', stderr, file, line);
 
+                // <sqr_col> is the column inside this square.
                 for (int sqr_col = 0; sqr_col < 3; sqr_col++) {
                     expect(text, c++, ' ', stderr, file, line);
                     expect(text, c, '0', stderr, file, line);
 
                     int col_num = sqr_col + 3 * sqr_num;
+
+                    // If there is a literal digit here, use that as the value
+                    // in this cell. Otherwise accept anything as a placeholder
+                    // and set the cell to 0 (i.e. empty).
 
                     if (isdigit(text[c])) {
                         sudoku->cell[row_num][col_num] = text[c] - '0';
@@ -382,9 +386,20 @@ static int load_sudoku(const char *file, Sudoku *sudoku)
 
     fclose(fp);
 
+    // Initialize the bitmasks for the rows, columns and 3x3 squares.
     init_sudoku(sudoku);
 
     return 0;
+}
+
+/*
+ * Give some usage info for <argv0> and exit with exit code <exitcode>.
+ */
+static void usage(const char *argv0, int exitcode)
+{
+    fprintf(stderr, "Usage: %s <sudoku_input_file>\n", basename(argv0));
+
+    exit(exitcode);
 }
 
 int main(int argc, char *argv[])
@@ -401,10 +416,9 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Input:\n"); dump_sudoku(stdout, &sudoku);
 
 #if DEBUG == 1
+    // Clear the terminal.
     fprintf(stderr, "\033[H\033[2J");
 #endif
-
-    // Here we go!
 
     if (step1(&sudoku)) {
         fprintf(stderr, "Found a solution using method 1.\n");
