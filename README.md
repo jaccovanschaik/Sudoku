@@ -6,14 +6,16 @@ cells where only a single value (given the other values in the row,
 column and 3x3 square that the cell is in) is available, filling the
 cell with that value and then doing the same again with the new sudoku.
 
-The second step, which is only executed if the first one couldn't solve
-the sudoku, will find all possible values for the first empty cell, fill
-that cell with all of them in turn, and then recursively try to solve
-the new sudoku. If at any point an empty cell is found where no value at
-all is available, this means that this particular sudoku is unsolvable,
-and the recursion goes back up a level to try the previous cell with the
-next available value. this all continues until either all the empty
-cells have been filled, or no solution could be found.
+The second step finds all possible values for the first empty cell,
+fills that cell with all of them in turn, and for each value recursively
+tries to solve the new sudoku. If at any point an empty cell is found
+where no value at all is available, this means that this particular
+sudoku is unsolvable, and the recursion goes back up a level to try the
+previous cell with the next available value. This continues until either
+all the empty cells have been filled, or no solution could be found.
+
+The second step is only executed if the first one couldn't solve the
+sudoku, and uses the final sudoku from the first step as input.
 
 The available values for each row, column and 3x3 square are kept as
 bitmasks (if bit 0 is set then 1 is still available, if bit 1 is set
